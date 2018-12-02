@@ -1,0 +1,36 @@
+window title="Test \"Title\"" width= 800 height =550
+{
+	//	A comment.
+
+	menu-bar dock = 789
+	{
+		menu-item text="File" {
+			menu-item text   = "Open" {
+				script language="Lua" [===[
+function OnClick(e)
+	OpenFileOpenDialog([==[some file path]==])
+end
+]===]
+			}
+			menu-separator;
+			menu-item#mi€ text="Exit";
+		}
+		/*
+		block comment lol*/
+	}
+}
+
+head {
+    title { "My website" }
+}
+
+template named-text-input name value=none btn= "OK" {
+    label text=$name;
+    input value = $value;
+    button text=$btn;
+}
+
+body {
+    named-text-input name= "Your name" value ="Player";
+    named-text-input name = "Your class" btn="Confirm";
+}
