@@ -1,8 +1,8 @@
-window title="Test \"Title\"" width= 800 height =550
+window title="Test \"Title\"" width= 8e2 height =550.078
 {
 	//	A comment.
 
-	menu-bar dock = 789
+	menu-bar dock = 0x315
 	{
 		menu-item text="File" {
 			menu-item text   = "Open" {
