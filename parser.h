@@ -4,12 +4,18 @@
 
 enum EXPRESSION_TYPES
 {
-	ET_NODE, ET_ATTRIBUTE, ET_DOCUMENT
+	ET_NODE, ET_ATTRIBUTE
 };
 
 #define EXPRESSION_BASE \
 	enum EXPRESSION_TYPES Type; \
 	size_t Start, End;
+
+typedef struct Class_s
+{
+	char const * Name;
+	struct Class_s * Next;
+} Class;
 
 enum ATTRIBUTE_VALUE_TYPES
 {
@@ -38,7 +44,7 @@ typedef struct AttributeExpression_s
 
 enum NODE_BODY_TYPES
 {
-	NBT_CHILDREN, NBT_DOCUMENT
+	NBT_NONE, NBT_CHILDREN, NBT_DOCUMENT
 };
 
 typedef struct NodeExpression_s
@@ -46,6 +52,9 @@ typedef struct NodeExpression_s
 	EXPRESSION_BASE
 
 	char const * Name;
+
+	Class * Classes;
+	char const * Id;
 
 	AttributeExpression * Attributes;
 

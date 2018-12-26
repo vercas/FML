@@ -1,8 +1,8 @@
-#include "stdlib.h"
 #include "stdio.h"
 #include "errno.h"
 #include "string.h"
 #include "lexer.h"
+#include "parser.h"
 
 static void phail(void)
 {
@@ -92,6 +92,9 @@ int main(int argc, char * * argv)
 		}
 	}
 
+	ParserState * p = Parse(l, ReportParserErrorDefault);
+
+	FreeParserState(p);
 	FreeLexerState(l);
 
 #undef PHAIL
