@@ -28,9 +28,9 @@ template named-text-input name value=none btn= "OK" {
     label text=$name;
     input value = $value;
     button text=$btn;
-}
+
 
 body {
-    named-text-input name= "Your name" value ="Player";
+    named-text-input.a.b.c.def.ghijkl.o123#yolo name= "Your name" value ="Player";
     named-text-input name = "Your class" btn="Confirm";
 }

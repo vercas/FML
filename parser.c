@@ -33,7 +33,7 @@ static NodeExpression * ParseNode(ParserState * p)
 	ne->Start = tk->Start;
 	ne->Name = tk->sValue;
 
-	printf("Node named %s.\n", ne->Name);
+	// printf("Node named %s.\n", ne->Name);
 
 	Class * * cl = &(ne->Classes);
 
@@ -57,7 +57,7 @@ static NodeExpression * ParseNode(ParserState * p)
 		(*cl)->Name = tk->sValue;
 		cl = &((*cl)->Next);
 
-		printf("\tClass named %s.\n", tk->sValue);
+		// printf("\tClass named %s.\n", tk->sValue);
 	}
 
 	if (tk->Type == TT_HASH)
@@ -75,7 +75,9 @@ static NodeExpression * ParseNode(ParserState * p)
 		else
 			ne->Id = tk->sValue;
 
-		printf("\tID named %s.\n", tk->sValue);
+		// printf("\tID named %s.\n", tk->sValue);
+
+		tk = ConsumeToken(p);	//	Moves on to the next token.
 	}
 
 	AttributeExpression * * at = &(ne->Attributes);
@@ -88,7 +90,7 @@ static NodeExpression * ParseNode(ParserState * p)
 		ae->Key = tk->sValue;
 		at = &(ae->Next);
 
-		printf("\tAttribute named %s.\n", tk->sValue);
+		// printf("\tAttribute named %s.\n", tk->sValue);
 
 		tk = ConsumeToken(p);
 
@@ -100,7 +102,7 @@ static NodeExpression * ParseNode(ParserState * p)
 		case TT_BRACKET_OPEN:	//	Node children begin.
 		case TT_DOCUMENT:		//	Node document begins.
 			ae->ValueType = AVT_NONE;
-			printf("\t\tNo value.\n");
+			// printf("\t\tNo value.\n");
 			break;
 
 			//	This means the attribute has an explicit value.
@@ -112,25 +114,25 @@ static NodeExpression * ParseNode(ParserState * p)
 			case TT_INTEGER:
 				ae->ValueType = AVT_INTEGER;
 				ae->lValue = tk->lValue;
-				printf("\t\tInteger value %llu.\n", tk->lValue);
+				// printf("\t\tInteger value %llu.\n", tk->lValue);
 				break;
 
 			case TT_FLOAT:
 				ae->ValueType = AVT_FLOAT;
 				ae->dValue = tk->dValue;
-				printf("\t\tFloat value %d.\n", tk->dValue);
+				// printf("\t\tFloat value %f.\n", tk->dValue);
 				break;
 
 			case TT_STRING:
 				ae->ValueType = AVT_STRING;
 				ae->sValue = tk->sValue;
-				printf("\t\tString value %s.\n", tk->sValue);
+				// printf("\t\tString value %s.\n", tk->sValue);
 				break;
 
 			case TT_IDENTIFIER:
 				ae->ValueType = AVT_IDENTIFIER;
 				ae->iValue = tk->sValue;
-				printf("\t\tIdentifier value %s.\n", tk->sValue);
+				// printf("\t\tIdentifier value %s.\n", tk->sValue);
 				break;
 
 			case TT_DOLLAR:
@@ -149,7 +151,7 @@ static NodeExpression * ParseNode(ParserState * p)
 				}
 
 				ae->rValue = tk->sValue;
-				printf("\t\tReference value %s.\n", tk->sValue);
+				// printf("\t\tReference value %s.\n", tk->sValue);
 				break;
 
 			default:
@@ -178,13 +180,13 @@ static NodeExpression * ParseNode(ParserState * p)
 		ne->BodyType = NBT_DOCUMENT;
 		ne->End = tk->End;
 		ne->Document = tk->sValue;
-		printf("\tDocument body.\n");
+		// printf("\tDocument body.\n");
 	}
 	else if (tk->Type == TT_SEMICOLON)
 	{
 		ne->BodyType = NBT_NONE;
 		ne->End = tk->End;
-		printf("\tNo body.\n");
+		// printf("\tNo body.\n");
 	}
 	else if (tk->Type == TT_BRACKET_OPEN)
 	{
@@ -204,7 +206,7 @@ static NodeExpression * ParseNode(ParserState * p)
 				}
 			}
 
-			printf("\tChild:\n");
+			// printf("\tChild:\n");
 
 			*nextNode = ParseNode(p);
 			nextNode = &((*nextNode)->Next);
@@ -314,7 +316,7 @@ bool ReportParserErrorDefault(ParserState * p, size_t loc, size_t cnt, char cons
 			break;
 		}
 
-	fprintf(stderr, "%zd:%ld: (%2X) %s\n", line, (long)loc - nlBeforeStart, p->lexer->Input[loc], err);
+	fprintf(stderr, "%zd:%ld: %s\n", line, (long)loc - nlBeforeStart, err);
 
 	if (nlAfterStart > nlBeforeStart)
 	{
