@@ -4,7 +4,7 @@
 
 enum EXPRESSION_TYPES
 {
-	ET_NODE, ET_ATTRIBUTE
+	ET_NODE, ET_CLASS, ET_ATTRIBUTE
 };
 
 #define EXPRESSION_BASE \
@@ -13,7 +13,10 @@ enum EXPRESSION_TYPES
 
 typedef struct Class_s
 {
+	EXPRESSION_BASE
+
 	char const * Name;
+	size_t NameLength;
 	struct Class_s * Next;
 } Class;
 
@@ -23,31 +26,36 @@ enum ATTRIBUTE_VALUE_TYPES
 	AVT_INTEGER, AVT_FLOAT
 };
 
-typedef struct AttributeExpression_s
+typedef struct Attribute_s
 {
 	EXPRESSION_BASE
 
 	char const * Key;
+	size_t KeyLength;
+
 	enum ATTRIBUTE_VALUE_TYPES ValueType;
 
 	union
 	{
-		char const * sValue;	//	AVT_STRING
-		char const * iValue;	//	AVT_IDENTIFIER
-		char const * rValue;	//	AVT_REFERENCE
+		struct					//	AVT_STRING, AVT_IDENTIFIER, AVT_REFERENCE
+		{
+			char const * sValue;
+			size_t sLength;
+		};
+
 		long long int lValue;	//	AVT_INTEGER
 		double dValue;			//	AVT_FLOAT
 	};
 
-	struct AttributeExpression_s * Next;
-} AttributeExpression;
+	struct Attribute_s * Next;
+} Attribute;
 
 enum NODE_BODY_TYPES
 {
 	NBT_NONE, NBT_CHILDREN, NBT_DOCUMENT
 };
 
-typedef struct NodeExpression_s
+typedef struct Node_s
 {
 	EXPRESSION_BASE
 
@@ -56,18 +64,27 @@ typedef struct NodeExpression_s
 	Class * Classes;
 	char const * Id;
 
-	AttributeExpression * Attributes;
+	Attribute * Attributes;
 
 	enum NODE_BODY_TYPES BodyType;
 
 	union
 	{
-		struct NodeExpression_s * Children;
-		char const * Document;
+		struct
+		{
+			struct Node_s * Children, * LastChild;
+			size_t ChildrenCount;
+		};
+
+		struct
+		{
+			char const * Document;
+			size_t DocumentLength;
+		};
 	};
 
-	struct NodeExpression_s * Next;
-} NodeExpression;
+	struct Node_s * Next;
+} Node;
 
 struct ParserState_s;
 typedef struct ParserState_s ParserState;
@@ -81,10 +98,10 @@ struct ParserState_s
 
 	ParserErrorSink ErrorSink;
 
-	NodeExpression * Nodes;
+	Node * Nodes, * LastNode;
 };
 
 ParserState * Parse(LexerState const * l, ParserErrorSink ers);
-void FreeParserState(ParserState * l);
+void FreeParserState(ParserState * p);
 
 bool ReportParserErrorDefault(ParserState * p, size_t loc, size_t cnt, char const * err);

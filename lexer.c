@@ -1,8 +1,8 @@
-#include "stdio.h"
-#include "errno.h"
-#include "string.h"
-#include "limits.h"
 #include "lexer.h"
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
+#include <limits.h>
 
 static void AppendToken(LexerState * l, Token * tk)
 {
@@ -83,6 +83,7 @@ static char * LexIdentifier(LexerState * l, char * str, size_t len)
 	}
 
 end_of_identifier:
+	l->workingToken->sLength = str - l->workingToken->sValue;
 	return str - 1;
 }
 
@@ -532,6 +533,7 @@ static char * LexString(LexerState * l, char * str, size_t len)
 				}
 
 				*w = '\0';
+				l->workingToken->sLength = w - l->workingToken->sValue;
 				return str;
 
 			case '\a': case '\b': case '\f': case '\n': case '\r':
@@ -673,6 +675,7 @@ post_closing_sequence:
 	}
 
 	*closeSequenceStart = '\0';
+	l->workingToken->sLength = closeSequenceStart - l->workingToken->sValue;
 	return str - 1;
 }
 
@@ -887,6 +890,8 @@ void FreeLexerState(LexerState * l)
 		free((void *)tk);
 		tk = tkNext;
 	}
+
+	free(l);
 }
 
 bool ReportLexerErrorDefault(LexerState * l, size_t loc, char const * err)

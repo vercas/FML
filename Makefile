@@ -1,6 +1,6 @@
-CFLAGS+=-std=gnu99 -Wall -Wextra
+CFLAGS+=-std=gnu11 -Wall -Wextra
 all: fml
-fml: fml.o lexer.o parser.o
+fml: fml.o lexer.o parser.o beautifier.o
 
 clean:
-	rm -f fml fml.o lexer.o parser.o utils.char.o
+	rm -f fml fml.o lexer.o parser.o beautifier.o utils.char.o

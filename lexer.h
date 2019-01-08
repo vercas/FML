@@ -1,8 +1,8 @@
 #pragma once
 
-#include "stdlib.h"
-#include "stdint.h"
-#include "stdbool.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 enum TOKEN_TYPES
 {
@@ -19,7 +19,12 @@ typedef struct Token_s
 
 	union
 	{
-		char const * sValue;	//	TT_IDENTIFIER, TT_STRING, TT_DOCUMENT
+		struct					//	TT_IDENTIFIER, TT_STRING, TT_DOCUMENT
+		{
+			char const * sValue;
+			size_t sLength;
+		};
+
 		long long int lValue;	//	TT_INTEGER
 		double dValue;			//	TT_FLOAT
 	};

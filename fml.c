@@ -1,12 +1,12 @@
-#include "stdio.h"
-#include "errno.h"
-#include "string.h"
 #include "lexer.h"
 #include "parser.h"
+#include "beautifier.h"
+#include <errno.h>
+#include <string.h>
 
 struct PrintContext
 {
-	NodeExpression const * Node;
+	Node const * Node;
 	int Spaces;
 	bool IsLast;
 	FILE * Output;
@@ -70,7 +70,7 @@ static void PrintNode(struct PrintContext * pc)
 
 		struct PrintContext spc = {NULL, 13, false, pc->Output, pc};
 
-		for (AttributeExpression const * at = pc->Node->Attributes; at != NULL; at = at->Next)
+		for (Attribute const * at = pc->Node->Attributes; at != NULL; at = at->Next)
 		{
 			spc.IsLast = at->Next == NULL;
 			PrintIndent(&spc, true);
@@ -87,10 +87,10 @@ static void PrintNode(struct PrintContext * pc)
 				fprintf(pc->Output, " = \"%s\" (string)\n", at->sValue);
 				break;
 			case AVT_IDENTIFIER:
-				fprintf(pc->Output, " = %s (identifier)\n", at->iValue);
+				fprintf(pc->Output, " = %s (identifier)\n", at->sValue);
 				break;
 			case AVT_REFERENCE:
-				fprintf(pc->Output, " = $%s (reference)\n", at->rValue);
+				fprintf(pc->Output, " = $%s (reference)\n", at->sValue);
 				break;
 			case AVT_INTEGER:
 				fprintf(pc->Output, " = %llu (integer)\n", at->lValue);
@@ -121,7 +121,7 @@ static void PrintNode(struct PrintContext * pc)
 
 			struct PrintContext spc = {NULL, 11, false, pc->Output, pc};
 
-			for (NodeExpression const * nd = pc->Node->Children; nd != NULL; nd = nd->Next)
+			for (Node const * nd = pc->Node->Children; nd != NULL; nd = nd->Next)
 			{
 				spc.Node = nd;
 				spc.IsLast = nd->Next == NULL;
@@ -141,7 +141,7 @@ static void PrintParserState(ParserState const * p, FILE * output)
 
 	fputs("Root ┐\n", output);
 
-	for (NodeExpression const * nd = p->Nodes; nd != NULL; nd = nd->Next)
+	for (Node const * nd = p->Nodes; nd != NULL; nd = nd->Next)
 	{
 		pc.Node = nd;
 		pc.IsLast = nd->Next == NULL;
@@ -178,6 +178,9 @@ int main(int argc, char * * argv)
 	fread(str, 1, cnt, fIn);
 	PHAIL
 	str[cnt] = '\0';
+
+	res = fclose(fIn);
+	PHAIL
 
 	printf("%zd characters\n", cnt);
 	fputs(str, stdout);
@@ -241,8 +244,18 @@ int main(int argc, char * * argv)
 
 	PrintParserState(p, stdout);
 
+	FILE * fOut = fopen("beautiful.fml", "w");
+	if (!fOut) phail();
+
+	res = FmlBeautify(p->Nodes, fOut);
+	PHAIL
+
+	res = fclose(fOut);
+	PHAIL
+
 	FreeParserState(p);
 	FreeLexerState(l);
+	free(str);
 
 #undef PHAIL
 

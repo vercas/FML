@@ -1,5 +1,5 @@
 #include "parser.h"
-#include "stdio.h"
+#include <stdio.h>
 
 static Token const * ConsumeToken(ParserState * const p)
 {
@@ -23,12 +23,12 @@ static bool ReportTkError(ParserState * p, Token const * tk, char const * err)
 	return p->ErrorSink(p, tk->Start, tk->End - tk->Start, err);
 }
 
-static NodeExpression * ParseNode(ParserState * p)
+static Node * ParseNode(ParserState * p)
 {
 	Token const * tk = ConsumeToken(p);
 	//	This one is guaranteed to be an identifier.
 
-	NodeExpression * ne = calloc(1, sizeof(NodeExpression));
+	Node * ne = calloc(1, sizeof(Node));
 	ne->Type = ET_NODE;
 	ne->Start = tk->Start;
 	ne->Name = tk->sValue;
@@ -40,6 +40,8 @@ static NodeExpression * ParseNode(ParserState * p)
 	//	If the token consumed here isn't a dot, it's used by the code after.
 	while ((tk = ConsumeToken(p))->Type == TT_DOT)
 	{
+		size_t start = tk->Start;
+
 		//	Dot requires an identifier (class name) after it.
 		tk = ConsumeToken(p);
 
@@ -47,14 +49,19 @@ static NodeExpression * ParseNode(ParserState * p)
 		{
 			ne->End = tk->End;
 
-			if (ReportTkError(p, tk, "Expected identifier after dot."))
+			if (ReportTkError(p, tk, "Expected identifier after dot.")
+				|| tk->Type == TT_EOF)
 				return ne;
 			else
 				continue;
 		}
 
 		*cl = calloc(1, sizeof(Class));
+		(*cl)->Type = ET_CLASS;
+		(*cl)->Start = start;
+		(*cl)->End = tk->End;
 		(*cl)->Name = tk->sValue;
+
 		cl = &((*cl)->Next);
 
 		// printf("\tClass named %s.\n", tk->sValue);
@@ -69,7 +76,8 @@ static NodeExpression * ParseNode(ParserState * p)
 		{
 			ne->End = tk->End;
 
-			if (ReportTkError(p, tk, "Expected identifier after hash."))
+			if (ReportTkError(p, tk, "Expected identifier after hash.")
+				|| tk->Type == TT_EOF)
 				return ne;
 		}
 		else
@@ -80,13 +88,14 @@ static NodeExpression * ParseNode(ParserState * p)
 		tk = ConsumeToken(p);	//	Moves on to the next token.
 	}
 
-	AttributeExpression * * at = &(ne->Attributes);
+	Attribute * * at = &(ne->Attributes);
 
 	for (/* nothing */; tk->Type == TT_IDENTIFIER; tk = ConsumeToken(p))
 	{
-		AttributeExpression * ae = *at = calloc(1, sizeof(AttributeExpression));
+		Attribute * ae = *at = calloc(1, sizeof(Attribute));
 		ae->Type = ET_ATTRIBUTE;
 		ae->Start = tk->Start;
+		ae->End = tk->End;
 		ae->Key = tk->sValue;
 		at = &(ae->Next);
 
@@ -126,12 +135,14 @@ static NodeExpression * ParseNode(ParserState * p)
 			case TT_STRING:
 				ae->ValueType = AVT_STRING;
 				ae->sValue = tk->sValue;
+				ae->sLength = tk->sLength;
 				// printf("\t\tString value %s.\n", tk->sValue);
 				break;
 
 			case TT_IDENTIFIER:
 				ae->ValueType = AVT_IDENTIFIER;
-				ae->iValue = tk->sValue;
+				ae->sValue = tk->sValue;
+				ae->sLength = tk->sLength;
 				// printf("\t\tIdentifier value %s.\n", tk->sValue);
 				break;
 
@@ -150,9 +161,16 @@ static NodeExpression * ParseNode(ParserState * p)
 						continue;
 				}
 
-				ae->rValue = tk->sValue;
+				ae->sValue = tk->sValue;
+				ae->sLength = tk->sLength;
 				// printf("\t\tReference value %s.\n", tk->sValue);
 				break;
+
+			case TT_EOF:
+				ne->End = tk->End;
+
+				ReportTkError(p, tk, "Unfinished attribute.");
+				return ne;
 
 			default:
 				ne->End = tk->End;
@@ -163,7 +181,15 @@ static NodeExpression * ParseNode(ParserState * p)
 					continue;
 			}
 
+			ae->End = tk->End;
+
 			break;
+
+		case TT_EOF:
+			ne->End = tk->End;
+
+			ReportTkError(p, tk, "Unclosed node.");
+			return ne;
 
 		default:
 			ne->End = tk->End;
@@ -180,6 +206,7 @@ static NodeExpression * ParseNode(ParserState * p)
 		ne->BodyType = NBT_DOCUMENT;
 		ne->End = tk->End;
 		ne->Document = tk->sValue;
+		ne->DocumentLength = tk->sLength;
 		// printf("\tDocument body.\n");
 	}
 	else if (tk->Type == TT_SEMICOLON)
@@ -191,13 +218,14 @@ static NodeExpression * ParseNode(ParserState * p)
 	else if (tk->Type == TT_BRACKET_OPEN)
 	{
 		ne->BodyType = NBT_CHILDREN;
-		NodeExpression * * nextNode = &(ne->Children);
+		Node * * nextNode = &(ne->Children);
 
 		while ((tk = PeekToken(p))->Type != TT_BRACKET_CLOSE)
 		{
 			if (tk->Type != TT_IDENTIFIER)
 			{
-				if (ReportTkError(p, tk, "Expected identifier to start child node."))
+				if (ReportTkError(p, tk, "Expected identifier to start child node.")
+					|| tk->Type == TT_EOF)
 					return ne;
 				else
 				{
@@ -208,15 +236,24 @@ static NodeExpression * ParseNode(ParserState * p)
 
 			// printf("\tChild:\n");
 
-			*nextNode = ParseNode(p);
+			ne->LastChild = *nextNode = ParseNode(p);
 			nextNode = &((*nextNode)->Next);
+			ne->ChildrenCount++;
 		}
 
 		ne->End = tk->End;
 		(void)ConsumeToken(p);	//	Consumes the closing bracket.
 	}
+	else if (tk->Type == TT_EOF)
+	{
+		ne->End = tk->End;
+
+		ReportTkError(p, tk, "Unclosed node.");
+	}
 	else
 	{
+		ne->End = tk->End;
+
 		ReportTkError(p, tk, "Unexpected token in node.");
 	}
 
@@ -230,7 +267,7 @@ ParserState * Parse(LexerState const * l, ParserErrorSink ers)
 	p->ErrorSink = ers;
 	p->curToken = NULL;
 
-	NodeExpression * * nextNode = &(p->Nodes);
+	Node * * nextNode = &(p->Nodes);
 	Token const * tk;
 
 	while ((tk = PeekToken(p))->Type != TT_EOF)
@@ -246,16 +283,46 @@ ParserState * Parse(LexerState const * l, ParserErrorSink ers)
 			}
 		}
 
-		*nextNode = ParseNode(p);
+		p->LastNode = *nextNode = ParseNode(p);
 		nextNode = &((*nextNode)->Next);
 	}
 
 	return p;
 }
 
-void FreeParserState(ParserState * l)
+void FreeParserState(ParserState * p)
 {
+	//	Freeing the node tree is done iteratively - it's actually flattened.
 
+	for (Node * n = p->Nodes; n != NULL; /* nothing */)
+	{
+		for (Attribute const * at = n->Attributes; at != NULL; /* nothing */)
+		{
+			Attribute const * atNext = at->Next;
+			free((void *)at);
+			at = atNext;
+		}
+
+		for (Class const * cl = n->Classes; cl != NULL; /* nothing */)
+		{
+			Class const * clNext = cl->Next;
+			free((void *)cl);
+			cl = clNext;
+		}
+
+		if (n->BodyType == NBT_CHILDREN && n->LastChild != NULL)
+		{
+			n->LastChild->Next = n->Next;
+			n->Next = n->Children;
+			//	This turns this node's children into its siblings! :DDD
+		}
+
+		Node * nNext = n->Next;
+		free(n);
+		n = nNext;
+	}
+
+	free(p);
 }
 
 bool ReportParserErrorDefault(ParserState * p, size_t loc, size_t cnt, char const * err)
